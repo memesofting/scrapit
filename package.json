@@ -1,0 +1,24 @@
+{
+  "name": "scrapit",
+  "version": "1.0.0",
+  "description": "polite web scraper",
+  "homepage": "https://github.com/memesofting/scrapit#readme",
+  "bugs": {
+    "url": "https://github.com/memesofting/scrapit/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/memesofting/scrapit.git"
+  },
+  "license": "ISC",
+  "author": "memesofting",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "zod": "^4.4.3"
+  }
+}
