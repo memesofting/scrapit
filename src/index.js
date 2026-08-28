@@ -1,5 +1,6 @@
 import axios from "axios";
-import fs from 'node:fs'
+import fs, { readFile } from 'node:fs'
+import * as cheerio from 'cheerio'
 
 const books_url = 'https://books.toscrape.com/'
 
@@ -23,7 +24,7 @@ const robot_scrape = async(url) =>{
 }
 
 
-const fetchOrReadCache = async()=>{
+const fetchOrReadCache = ()=>{
     if (fs.existsSync(cachePath)){
         // read cache
         console.log('CACHE HIT')
@@ -34,4 +35,11 @@ const fetchOrReadCache = async()=>{
     }
 }
 
+const cheerioParse = async()=>{
+    const page = await fs.promises.readFile(cachePath, 'utf-8')
+    const $ = cheerio.load(page)
+    console.log($('title').text())
+}
+
 fetchOrReadCache();
+cheerioParse();
