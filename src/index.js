@@ -1,14 +1,16 @@
 import axios from "axios";
 import fs, { readFile } from 'node:fs'
+import path from 'node:path'
 import * as cheerio from 'cheerio'
 
-const books_url = 'https://books.toscrape.com/'
+const baseUrl = 'https://books.toscrape.com/'
 
+const baseCachePath = 'cache/'
 const cachePath = 'cache/catalogue-page-1.html';
 
 const pages = [];
 
-const page_scrape = async(url) =>{
+const pageCache = async(url, cache) =>{
     try {
         const books = await axios.get(url, {
             timeout: 10000,
@@ -18,10 +20,11 @@ const page_scrape = async(url) =>{
         });
         if (books.status === 200){
             // console.log(books.data)
-            await fs.promises.writeFile(cachePath, books.data, 'utf-8')
+            await fs.promises.writeFile(cache, books.data, 'utf-8')
         }
     } catch(error){
         console.log(error)
+        // throw error
     };
 }
 
@@ -34,7 +37,7 @@ const fetchOrReadCache = ()=>{
     }
     else{
         console.log('FETCH')
-        page_scrape(books_url)
+        pageCache(baseUrl, cachePath)
     }
 }
 
@@ -47,18 +50,38 @@ const cheerioPageParse = async(cache)=>{
     const book_links = books_class.find('a').attr('href')
     // console.log(book_links)
     books_class.each((_, el)=>{
-        const url = new URL($(el).find('a').attr('href'), books_url)
+        const url = new URL($(el).find('a').attr('href'), baseUrl)
         links.push(url.href)
     })
     // console.log(links)
     pages.push(links)
     console.log(pages)
 
+    const currentPage = Number($('.current').text().trim().split(' ')[1])
+    if (currentPage == 3){
+        return
+    }
     const nextPage = $('.next a').attr('href');
+    const nextPageUrl = new URL(nextPage, baseUrl).href
     console.log(nextPage)
-    // if (fs.existsSync('cache/' + nextPage)){
-    //     cheerioPageParse(nextPage)
-    // }else{}
+    const newPath = path.join(baseCachePath, nextPage.replaceAll('/', '-'))
+    // console.log(new URL(nextPage, baseUrl).href)
+    console.log(newPath)
+    console.log(`currentPage : ${currentPage}`)
+    if (fs.existsSync(newPath)){
+        console.log(`CACHE HIT ${currentPage}`)
+        await cheerioPageParse(newPath)
+    }else{
+        // cache page
+
+        // console.log({
+        // nextPage,
+        // newPath,
+        // nextUrl: new URL(nextPage, baseUrl).href
+        // });
+        await pageCache(nextPageUrl, newPath)
+        await cheerioPageParse(newPath)
+    }
 }
 
 fetchOrReadCache();
