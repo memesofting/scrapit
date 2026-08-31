@@ -10,38 +10,39 @@ const cachePath = 'cache/catalogue-page-1.html';
 
 const pages = [];
 
-const pageCache = async(url, cache) =>{
+const pageCache = async (url, cache) => {
     try {
         const books = await axios.get(url, {
-            timeout: 10000,
-            headers:{
+            timeout: 5000,
+            headers: {
                 "User-Agent": "FlyRankInternship-A9/1.0 (https://github.com/memesofting/scrapit)"
             }
         });
-        if (books.status === 200){
+        if (books.status === 200) {
             // console.log(books.data)
             await fs.promises.writeFile(cache, books.data, 'utf-8')
         }
-    } catch(error){
+    } catch (error) {
         console.log(error)
         // throw error
     };
 }
 
 
-const fetchOrReadCache = ()=>{
-    if (fs.existsSync(cachePath)){
+const fetchOrReadCache = async () => {
+    if (fs.existsSync(cachePath)) {
         // read cache
         console.log('CACHE HIT')
-        cheerioPageParse(cachePath);
+        await cheerioPageParse(cachePath);
     }
-    else{
+    else {
         console.log('FETCH')
-        pageCache(baseUrl, cachePath)
+        await pageCache(baseUrl, cachePath)
+        await cheerioPageParse(cachePath);
     }
 }
 
-const cheerioPageParse = async(cache)=>{
+const cheerioPageParse = async (cache) => {
     const links = []
     const page = await fs.promises.readFile(cache, 'utf-8')
     const $ = cheerio.load(page)
@@ -49,41 +50,41 @@ const cheerioPageParse = async(cache)=>{
     // const book_links = books.find('a').attr('href')
     const book_links = books_class.find('a').attr('href')
     // console.log(book_links)
-    books_class.each((_, el)=>{
+    books_class.each((_, el) => {
         const url = new URL($(el).find('a').attr('href'), baseUrl)
         links.push(url.href)
     })
     // console.log(links)
     pages.push(links)
-    console.log(pages)
+    console.log(links.length)
+    console.log(pages.length)
 
     const currentPage = Number($('.current').text().trim().split(' ')[1])
-    if (currentPage == 3){
+    if (currentPage == 3) {
         return
     }
-    const nextPage = $('.next a').attr('href');
+    const nextPageHref = $('.next a').attr('href').replace('catalogue/', '');
+    const nextPage = 'catalogue/' + nextPageHref
     const nextPageUrl = new URL(nextPage, baseUrl).href
-    console.log(nextPage)
+    console.log(`Next page: ${nextPage}`)
     const newPath = path.join(baseCachePath, nextPage.replaceAll('/', '-'))
-    // console.log(new URL(nextPage, baseUrl).href)
-    console.log(newPath)
+
+    console.log(`Next cache path: ${newPath}`)
     console.log(`currentPage : ${currentPage}`)
-    if (fs.existsSync(newPath)){
+    if (fs.existsSync(newPath)) {
         console.log(`CACHE HIT ${currentPage}`)
         await cheerioPageParse(newPath)
-    }else{
+    } else {
         // cache page
 
-        // console.log({
-        // nextPage,
-        // newPath,
-        // nextUrl: new URL(nextPage, baseUrl).href
-        // });
+        console.log({
+            nextPage,
+            newPath,
+            nextUrl: new URL(nextPage, baseUrl).href
+        });
         await pageCache(nextPageUrl, newPath)
         await cheerioPageParse(newPath)
     }
 }
 
 fetchOrReadCache();
-// await cheerioPageParse();
-// console.log(pages)
