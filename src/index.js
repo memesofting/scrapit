@@ -6,7 +6,9 @@ const books_url = 'https://books.toscrape.com/'
 
 const cachePath = 'cache/catalogue-page-1.html';
 
-const robot_scrape = async(url) =>{
+const pages = [];
+
+const page_scrape = async(url) =>{
     try {
         const books = await axios.get(url, {
             timeout: 10000,
@@ -28,18 +30,37 @@ const fetchOrReadCache = ()=>{
     if (fs.existsSync(cachePath)){
         // read cache
         console.log('CACHE HIT')
+        cheerioPageParse(cachePath);
     }
     else{
         console.log('FETCH')
-        robot_scrape(books_url)
+        page_scrape(books_url)
     }
 }
 
-const cheerioParse = async()=>{
-    const page = await fs.promises.readFile(cachePath, 'utf-8')
+const cheerioPageParse = async(cache)=>{
+    const links = []
+    const page = await fs.promises.readFile(cache, 'utf-8')
     const $ = cheerio.load(page)
-    console.log($('title').text())
+    const books_class = $('.product_pod')
+    // const book_links = books.find('a').attr('href')
+    const book_links = books_class.find('a').attr('href')
+    // console.log(book_links)
+    books_class.each((_, el)=>{
+        const url = new URL($(el).find('a').attr('href'), books_url)
+        links.push(url.href)
+    })
+    // console.log(links)
+    pages.push(links)
+    console.log(pages)
+
+    const nextPage = $('.next a').attr('href');
+    console.log(nextPage)
+    // if (fs.existsSync('cache/' + nextPage)){
+    //     cheerioPageParse(nextPage)
+    // }else{}
 }
 
 fetchOrReadCache();
-cheerioParse();
+// await cheerioPageParse();
+// console.log(pages)
