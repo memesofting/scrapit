@@ -2,6 +2,7 @@ import axios from "axios";
 import fs, { readFile } from 'node:fs'
 import path from 'node:path'
 import * as cheerio from 'cheerio'
+import { ca } from "zod/locales";
 
 const baseUrl = 'https://books.toscrape.com/'
 
@@ -9,6 +10,7 @@ const baseCachePath = 'cache/'
 const cachePath = 'cache/catalogue-page-1.html';
 
 const pages = [];
+const bookDetails = [];
 
 const pageCache = async (url, cache) => {
     try {
@@ -57,6 +59,7 @@ const cheerioPageParse = async (cache) => {
     // console.log(links)
     pages.push(links)
     console.log(links.length)
+    // console.log(pages)
     console.log(pages.length)
 
     const currentPage = Number($('.current').text().trim().split(' ')[1])
@@ -87,4 +90,57 @@ const cheerioPageParse = async (cache) => {
     }
 }
 
-fetchOrReadCache();
+await fetchOrReadCache();
+const bookPageLinks = pages.flat();
+console.log(bookPageLinks)
+
+const getBookDetails = async (url, link) => {
+
+}
+
+const getAllBookDetails = async (links) => {
+    for (let i = 0; i < links.length; i++) {
+        for (let j = 0; j < 20; j++) {
+            const cacheFile = `books_cache/page${i}-${j}.html`
+            if (fs.existsSync(cacheFile)) {
+                console.log(`BOOK PAGE: ${cacheFile} HIT`)
+                const cache = await fs.promises.readFile(cacheFile, 'utf-8')
+                const $ = cheerio.load(cache)
+                const description = $('#product_description').next().text() ? $('#product_description').next().text() : null
+                const ratingClass = $('.star-rating').attr('class');
+                const rating = ratingClass.split(' ')[1];
+                const fetched_at = new Date().toISOString();
+                const details = $.extract(
+                    {
+                        title: 'h1',
+                        price_text: '.price_color',
+                        availability_text: '.instock.availability',
+                        // fetched_at: "2026-08-06T10:00:00Z"
+                    }
+                )
+                details.product_url = links[i][j]
+                details.description = description
+                details.rating_text = rating
+                details.source_page = `https://books.toscrape.com/catalogue/page-${i}.html`
+                details.fetched_at = fetched_at
+                bookDetails.push(details)
+            } else {
+                const pageLink = links[i][j].split('/')
+                const cleanPageLink = `${baseUrl}/catalogue/${pageLink[pageLink.length - 2]}/${pageLink[pageLink.length - 1]}`
+                // pageCache(links[i][j], cacheFile)
+                pageCache(cleanPageLink, cacheFile)
+            }
+        }
+
+    }
+}
+
+await getAllBookDetails(pages)
+// console.log(bookDetails)
+
+// for (let book of bookDetails) {
+//     if (book.description != null) {
+//         console.log(book.title)
+//     }
+// }
+
