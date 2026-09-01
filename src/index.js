@@ -2,7 +2,9 @@ import axios from "axios";
 import fs, { readFile } from 'node:fs'
 import path from 'node:path'
 import * as cheerio from 'cheerio'
-import { ca } from "zod/locales";
+import * as z from 'zod'
+import { title } from "node:process";
+import { promises } from "node:dns";
 
 const baseUrl = 'https://books.toscrape.com/'
 
@@ -91,56 +93,89 @@ const cheerioPageParse = async (cache) => {
 }
 
 await fetchOrReadCache();
-const bookPageLinks = pages.flat();
-console.log(bookPageLinks)
+// const bookPageLinks = pages.flat();
+// console.log(bookPageLinks)
 
-const getBookDetails = async (url, link) => {
+const validateBook = (bookObj) => {
+    const Book = z.object({
+        title: z.string(),
+        product_url: z.string(),
+        price_text: z.string(),
+        price_gbp: z.number(),
+        availability_text: z.string(),
+        rating_text: z.string(),
+        description: z.string(),
+        source_page: z.string(),
+        fetched_at: z.string()
+    })
 
+    const result = Book.safeParse(bookObj)
+    if (result.success) {
+        result.data
+    } else {
+        result.error
+    }
 }
 
 const getAllBookDetails = async (links) => {
     for (let i = 0; i < links.length; i++) {
-        for (let j = 0; j < 20; j++) {
+        for (let j = 0; j < links[i].length; j++) {
             const cacheFile = `books_cache/page${i}-${j}.html`
             if (fs.existsSync(cacheFile)) {
-                console.log(`BOOK PAGE: ${cacheFile} HIT`)
+                // console.log(`BOOK PAGE: ${cacheFile} HIT`)
                 const cache = await fs.promises.readFile(cacheFile, 'utf-8')
                 const $ = cheerio.load(cache)
                 const description = $('#product_description').next().text() ? $('#product_description').next().text() : null
                 const ratingClass = $('.star-rating').attr('class');
+                const availability = $('.product_main .instock.availability').text();
                 const rating = ratingClass.split(' ')[1];
                 const fetched_at = new Date().toISOString();
                 const details = $.extract(
                     {
                         title: 'h1',
                         price_text: '.price_color',
-                        availability_text: '.instock.availability',
-                        // fetched_at: "2026-08-06T10:00:00Z"
+                        // availability_text: '.instock.availability'
                     }
                 )
+                // console.log(availability)
+                // console.log($('.product_main .instock.availability').length)
+                details.price_gbp = Number(details.price_text.slice(1, details.price_text.length))
                 details.product_url = links[i][j]
-                details.description = description
+                details.availability_text = availability.trim()
                 details.rating_text = rating
+                details.description = description
                 details.source_page = `https://books.toscrape.com/catalogue/page-${i}.html`
                 details.fetched_at = fetched_at
+
+                const validate = validateBook(details)
                 bookDetails.push(details)
             } else {
                 const pageLink = links[i][j].split('/')
                 const cleanPageLink = `${baseUrl}/catalogue/${pageLink[pageLink.length - 2]}/${pageLink[pageLink.length - 1]}`
                 // pageCache(links[i][j], cacheFile)
-                pageCache(cleanPageLink, cacheFile)
+                await pageCache(cleanPageLink, cacheFile)
             }
         }
 
     }
 }
 
+
+
 await getAllBookDetails(pages)
 // console.log(bookDetails)
+
+const bookJson = JSON.stringify(bookDetails)
+console.log(bookJson)
 
 // for (let book of bookDetails) {
 //     if (book.description != null) {
 //         console.log(book.title)
 //     }
 // }
+
+if (fs.existsSync('output/books.json')) {
+} else {
+    await fs.promises.writeFile('output/books.json', bookJson, 'utf-8')
+}
 
