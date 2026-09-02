@@ -109,15 +109,17 @@ const validateBook = (bookObj) => {
         fetched_at: z.string()
     })
 
-    const result = Book.safeParse(bookObj)
-    if (result.success) {
-        return result.data
-    } else {
-        return result.error
-    }
+    return Book.safeParse(bookObj)
+    // if (result.success) {
+    //     result.data
+    // } else {
+    //     result.error
+    // }
+    // console.log('validated')
 }
 
 const getAllBookDetails = async (links) => {
+    let validateError = false
     for (let i = 0; i < links.length; i++) {
         for (let j = 0; j < links[i].length; j++) {
             const cacheFile = `books_cache/page${i}-${j}.html`
@@ -137,9 +139,8 @@ const getAllBookDetails = async (links) => {
                         // availability_text: '.instock.availability'
                     }
                 )
-                // console.log(availability)
-                // console.log($('.product_main .instock.availability').length)
-                details.price_gbp = Number(details.price_text.slice(1, details.price_text.length))
+                
+                details.price_gbp = Number(details.price_text.slice(1)) ? Number(details.price_text.slice(1)) : undefined
                 details.product_url = links[i][j]
                 details.availability_text = availability.trim()
                 details.rating_text = rating
@@ -148,6 +149,11 @@ const getAllBookDetails = async (links) => {
                 details.fetched_at = fetched_at
 
                 const validate = validateBook(details)
+                if (!validate.success){
+                    validateError = true
+                    break
+                }
+                console.log(validate)
                 bookDetails.push(details)
             } else {
                 const pageLink = links[i][j].split('/')
@@ -156,7 +162,9 @@ const getAllBookDetails = async (links) => {
                 await pageCache(cleanPageLink, cacheFile)
             }
         }
-
+        if (validateError){
+            break
+        }
     }
 }
 
