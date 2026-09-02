@@ -111,9 +111,9 @@ const validateBook = (bookObj) => {
 
     const result = Book.safeParse(bookObj)
     if (result.success) {
-        result.data
+        return result.data
     } else {
-        result.error
+        return result.error
     }
 }
 
@@ -166,16 +166,11 @@ await getAllBookDetails(pages)
 // console.log(bookDetails)
 
 const bookJson = JSON.stringify(bookDetails)
-console.log(bookJson)
-
-// for (let book of bookDetails) {
-//     if (book.description != null) {
-//         console.log(book.title)
-//     }
-// }
+// console.log(bookJson)
+console.log(`No of books: ${bookDetails.length}`)
 
 if (fs.existsSync('output/books.json')) {
+    console.log('Books.json already exists')
 } else {
     await fs.promises.writeFile('output/books.json', bookJson, 'utf-8')
 }
-
