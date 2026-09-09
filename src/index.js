@@ -5,6 +5,11 @@ import * as cheerio from 'cheerio'
 import * as z from 'zod'
 import { title } from "node:process";
 import { promises } from "node:dns";
+import express from 'express'
+
+
+const app = express()
+app.use(express.json())
 
 const baseUrl = 'https://books.toscrape.com/'
 
@@ -189,3 +194,16 @@ if (fs.existsSync('output/books.json')) {
 } else {
     await fs.promises.writeFile('output/books.json', bookJson, 'utf-8')
 }
+
+
+const enrich = async(req, res)=>{
+
+}
+
+
+app.get('/', (req, res)=>{
+    return res.status(200).json({
+        message: "enrich scraping"
+    })
+})
+app.post('/enrich', enrich)
