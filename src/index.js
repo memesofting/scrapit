@@ -200,10 +200,14 @@ const enrich = async(req, res)=>{
 
 }
 
-
+const port = 4000
 app.get('/', (req, res)=>{
     return res.status(200).json({
         message: "enrich scraping"
     })
 })
 app.post('/enrich', enrich)
+
+app.listen(port, ()=>{
+    console.log(`app listening to ${port}`)
+})
