@@ -17,7 +17,7 @@ const bookDetails = [];
 const pageCache = async (url, cache) => {
     try {
         const books = await axios.get(url, {
-            timeout: 5000,
+            timeout: 10000,
             headers: {
                 "User-Agent": "FlyRankInternship-A9/1.0 (https://github.com/memesofting/scrapit)"
             }
@@ -51,7 +51,6 @@ const cheerioPageParse = async (cache) => {
     const page = await fs.promises.readFile(cache, 'utf-8')
     const $ = cheerio.load(page)
     const books_class = $('.product_pod')
-    // const book_links = books.find('a').attr('href')
     const book_links = books_class.find('a').attr('href')
     // console.log(book_links)
     books_class.each((_, el) => {
@@ -110,21 +109,21 @@ const validateBook = (bookObj) => {
     })
 
     return Book.safeParse(bookObj)
-    // if (result.success) {
-    //     result.data
-    // } else {
-    //     result.error
-    // }
-    // console.log('validated')
 }
 
+const report = {}
+const failedPages = []
+
 const getAllBookDetails = async (links) => {
-    let validateError = false
+    // let validateError = false
+    const startTime = new Date().toISOString();
+    let cacheHit = 0
     for (let i = 0; i < links.length; i++) {
         for (let j = 0; j < links[i].length; j++) {
             const cacheFile = `books_cache/page${i}-${j}.html`
             if (fs.existsSync(cacheFile)) {
                 // console.log(`BOOK PAGE: ${cacheFile} HIT`)
+                cacheHit += 1
                 const cache = await fs.promises.readFile(cacheFile, 'utf-8')
                 const $ = cheerio.load(cache)
                 const description = $('#product_description').next().text() ? $('#product_description').next().text() : null
@@ -150,24 +149,32 @@ const getAllBookDetails = async (links) => {
 
                 const validate = validateBook(details)
                 if (!validate.success){
-                    validateError = true
-                    break
+                    // validateError = true
+                    report.startTime = startTime
+                    // report.duration = fetched_at - new Date().toISOString();
+                    report.pagesFetched = j -1
+                    report.cacheHit = cacheHit
+                    report.invalidRecords = validate.error
+                    report.failedPages = failedPages.push(cacheFile)
+                    continue
                 }
-                console.log(validate)
+                // console.log(validate)
                 bookDetails.push(details)
             } else {
                 const pageLink = links[i][j].split('/')
                 const cleanPageLink = `${baseUrl}/catalogue/${pageLink[pageLink.length - 2]}/${pageLink[pageLink.length - 1]}`
                 // pageCache(links[i][j], cacheFile)
                 await pageCache(cleanPageLink, cacheFile)
+                // if (pageCache.status === 200){
+                //     console.log('O ti clear')
+                // }
             }
         }
-        if (validateError){
-            break
-        }
+        // if (validateError){
+        //     break
+        // }
     }
 }
-
 
 
 await getAllBookDetails(pages)
