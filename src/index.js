@@ -5,11 +5,7 @@ import * as cheerio from 'cheerio'
 import * as z from 'zod'
 import { title } from "node:process";
 import { promises } from "node:dns";
-import express from 'express'
-
-
-const app = express()
-app.use(express.json())
+import app from "./routes/route.js";
 
 const baseUrl = 'https://books.toscrape.com/'
 
@@ -195,18 +191,8 @@ if (fs.existsSync('output/books.json')) {
     await fs.promises.writeFile('output/books.json', bookJson, 'utf-8')
 }
 
-
-const enrich = async(req, res)=>{
-
-}
-
 const port = 4000
-app.get('/', (req, res)=>{
-    return res.status(200).json({
-        message: "enrich scraping"
-    })
-})
-app.post('/enrich', enrich)
+
 
 app.listen(port, ()=>{
     console.log(`app listening to ${port}`)
