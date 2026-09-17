@@ -1,6 +1,8 @@
 import express from "express";
 import { validateInput, validateOutput } from "../llm/schema.js";
 import OpenAI from "openai";
+import fs from 'node:fs'
+import { json } from "zod";
 
 const app = express();
 app.use(express.json());
@@ -10,13 +12,34 @@ const client = new OpenAI({
   apiKey: process.env.LLM_API_KEY, // Ollama: http://localhost:11434/v1/
 });
 
+// const systemPrompt = fs.promises.readFile('./src/prompts/enrich-v1.md', 'utf-8')
+
 // const res = await client.chat.completions.create({
 //   model: process.env.LLM_MODEL, // "openrouter/free" or "gemma3:1b"
 //   messages: [{ role: "user", content: "Reply with exactly the word: ready" }],
 // });
 // console.log(res.choices[0].message.content);
 
+const llmCall = async(prompt, requestObj) =>{
+    const res = await client.chat.completions.create({
+        model: process.env.LLM_MODEL,
+        messages: [
+            {
+                role: "user",
+                content: prompt
+            },
+            {
+                role: "user",
+                content: requestObj
+            }
+        ]
+    })
+    return res.choices[0].message.content
+}
+
 const enrich = async (req, res) => {
+    const systemPrompt = await fs.promises.readFile('./src/prompts/enrich-v1.md', 'utf-8')
+
     console.log(req.body)
     const validInput = validateInput(req.body)
     if (validInput.success){
@@ -26,6 +49,10 @@ const enrich = async (req, res) => {
                 author: "Shel Silverstein",
                 confidence: 0.9
             })
+        }
+        else{
+            console.log("in llm")
+            llmCall(systemPrompt, JSON.stringify(req.body))
         }
     }else{
         console.log("at error")
