@@ -8,8 +8,9 @@ const app = express();
 app.use(express.json());
 
 const client = new OpenAI({
-  baseURL: process.env.LLM_BASE_URL, // OpenRouter: https://openrouter.ai/api/v1
-  apiKey: process.env.LLM_API_KEY, // Ollama: http://localhost:11434/v1/
+    baseURL: process.env.LLM_BASE_URL, // OpenRouter: https://openrouter.ai/api/v1
+    apiKey: process.env.LLM_API_KEY, // Ollama: http://localhost:11434/v1/
+    timeout: 7000
 });
 
 // const systemPrompt = fs.promises.readFile('./src/prompts/enrich-v1.md', 'utf-8')
@@ -20,7 +21,7 @@ const client = new OpenAI({
 // });
 // console.log(res.choices[0].message.content);
 
-const llmCall = async(prompt, requestObj) =>{
+const llmCall = async (prompt, requestObj) => {
     const res = await client.chat.completions.create({
         model: process.env.LLM_MODEL,
         messages: [
@@ -42,38 +43,38 @@ const enrich = async (req, res) => {
 
     console.log(req.body)
     const validInput = validateInput(req.body)
-    if (validInput.success){
-        if (process.env.LLM_STUB == 1){
+    if (validInput.success) {
+        if (process.env.LLM_STUB == 1) {
             return res.status(200).json({
                 title: "A Light in the Attic",
                 author: "Shel Silverstein",
                 confidence: 0.9
             })
         }
-        else{
+        else {
             console.log("in llm")
-            llmCall(systemPrompt, JSON.stringify(req.body))
+            const result = await llmCall(systemPrompt, JSON.stringify(req.body))
+            console.log(result)
+            return res.status(200).json({
+                llmResult: result
+            })
         }
-    }else{
+    } else {
         console.log("at error")
         return res.status(400).json(validInput.error)
     }
-    console.log("need llm")
-    return res.status(400).json({
-        message: "need llm"
-    })
 };
 
 app.get("/", (req, res) => {
-  return res.status(200).json({
-    message: "enrich scraping",
-    job: {
-      title: "book title",
-      author:
-        'get book author from description/"Unknown" if no author if given in description',
-      confidence: "0.0 - 1.0",
-    },
-  });
+    return res.status(200).json({
+        message: "enrich scraping",
+        job: {
+            title: "book title",
+            author:
+                'get book author from description/"Unknown" if no author if given in description',
+            confidence: "0.0 - 1.0",
+        },
+    });
 });
 app.post("/enrich", enrich);
 
